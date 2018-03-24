@@ -10,7 +10,6 @@
 #define heap_h
 
 #include"struct.h"
-//调整最小堆
 void adjust_heap(Node** nodes,long s,long e){
     if(nodes==nullptr || s < 0  || e < 0 || e < s){
         error("adjust_heap:argument error");
@@ -28,7 +27,6 @@ void adjust_heap(Node** nodes,long s,long e){
     }
     nodes[cur_i]=cur;
 }
-//初始化最小堆
 void init_heap(Node** nodes,long len){
     if(nodes == nullptr || len <=0 || len > 256){
         error("init_heap:argument error");
@@ -38,21 +36,20 @@ void init_heap(Node** nodes,long len){
         adjust_heap(nodes,root,len);
     }
 }
-//获得当前堆最小的两个数
 void get2min_heap(Node** nodes,long* len,Node** min1,Node** min2){
     if(nodes == nullptr){
         error("get2min_heap:argument error");
     }
     *min1 = nodes[1];
-    nodes[1]=nodes[*len ];
+    nodes[1]=nodes[*len];
     (*len)-=1;
     
     adjust_heap(nodes,1,*len);
     *min2 = nodes[1];
-    nodes[1] = nodes[*len ];
+    nodes[1] = nodes[*len];
+    (*len)-=1;
     if(*len > 0){
         adjust_heap(nodes,1,*len);
     }
 }
-
 #endif /* heap_h */

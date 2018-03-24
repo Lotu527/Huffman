@@ -108,31 +108,27 @@ void encode(Node** nodes,long len,Encode* encodes){
     //对原Node数据进行拷贝
     Node** backup = new Node*[len+1];
     if(backup == nullptr)error("encode:new backup error");
-    long i , start;
+    long i , j, start;
     char tmp[260];
     for(i=1;i<=len;i++)backup[i]=nodes[i];
     Huffman huffman=*new Huffman(nodes,len);
-    huffman.test_huffman_tree();
 //    huffman.in_traverse_tree(huffman.get_root());
-    for(i=0;i<len;i++){
-        
-//        if(encodes[i].len>0)log(encodes[i].code);
-//        start=259;
-//        Node* leaf = backup[i];
-//        while (leaf->parent != nullptr) {
-//            Node* parent = leaf->parent;
-//            if(parent->left == leaf)tmp[start--]='0';
-//            else if(parent->right == leaf)tmp[start--]='1';
-//            else error("huffman tree we reference seems not correct");
-//            leaf = leaf->parent;
-//        }
-//        long j =backup[i]->data;
-//        printf("%ld",j);
-////        convert(backup[i]->data);
-//        encodes[j].code = new char[259-start];
-//        if(encodes[j].code == nullptr)error("encode:new code failed");
-//        encodes[j].len = 259 - start;
-//        memcpy(encodes[j].code,tmp+start+1,259-start);
+//    huffman.in_traverse_tree(huffman.get_root());
+    for(i=1;i<=len;i++){
+        start=259;
+        Node* leaf = backup[i];
+        while (leaf->parent != nullptr) {
+            Node* parent = leaf->parent;
+            if(parent->left == leaf)tmp[start--]='0';
+            else if(parent->right == leaf)tmp[start--]='1';
+            else error("huffman tree we reference seems not correct");
+            leaf = leaf->parent;
+        }
+        j =backup[i]->data;
+        encodes[j].code = new char[259-start];
+        if(encodes[j].code == nullptr)error("encode:new code failed");
+        encodes[j].len = 259 - start;
+        memcpy(encodes[j].code,tmp+start+1,259-start);
     }
     if(backup != nullptr){
         delete[] backup;

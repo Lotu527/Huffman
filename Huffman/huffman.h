@@ -53,7 +53,7 @@ Huffman::Huffman(Node** nodes,long len){
         init_heap(nodes,len_heap);
     }
     if(parent_node[len-1].parent == nullptr)this->root=&parent_node[len-1];
-    else error("init tree:failed");
+    else error("init_tree:failed");
 }
 
 void Huffman::test_huffman_tree(){
@@ -95,7 +95,7 @@ Huffman::~Huffman(){
 }
 
 void Huffman::in_traverse_tree(Node* root , long level){
-    if(root){
+    if(root != nullptr){
         in_traverse_tree(root->left,level+1);
         if(root->left==nullptr && root->right==nullptr){
             if(root->parent==nullptr){
@@ -105,7 +105,6 @@ void Huffman::in_traverse_tree(Node* root , long level){
         }
 //        printf("[level:%d,value:%lld] ",level,root->count);
         in_traverse_tree(root->right,level+1);
-        
     }
 }
 
