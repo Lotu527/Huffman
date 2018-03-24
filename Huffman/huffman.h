@@ -15,6 +15,7 @@ class Huffman{
 public:
     Huffman();
     Huffman(Node** nodes,long len);
+    Huffman(Encode* nodes);
     ~Huffman();
     
     void in_traverse_tree(Node* root, long level=0);
@@ -55,38 +56,45 @@ Huffman::Huffman(Node** nodes,long len){
     if(parent_node[len-1].parent == nullptr)this->root=&parent_node[len-1];
     else error("init_tree:failed");
 }
-
-void Huffman::test_huffman_tree(){
-    const long data_num=16;
-    long data_max=100;
-    long data_array[data_num+1];
-    long heap_size=data_num;
-    srand((long)time(0));
-    Node * huffman_data[data_num+1];
-    long level=0;
+Huffman::Huffman(Encode* encodes){
+    if(encodes == nullptr)error("Huffman:argument error");
+    long num = 0 ,i , j , index;
+    for(i=0;i<256;i++)
+        if(encodes[i].len > 0)
+           num++;
     
-    for(long index=1;index<=data_num;index++){
-        huffman_data[index]=(Node *)malloc(sizeof(Node));
-        huffman_data[index]->count=rand()%data_max;
-        data_array[index]=huffman_data[index]->count;
-        huffman_data[index]->left=NULL;
-        huffman_data[index]->right=NULL;
-    }
-    printf("orginal data\n");
-    for(long i=1;i<=data_num;i++){
-        if(i%9==0) printf("\n");
-        printf("%-3ld, ",data_array[i]);
-    }
-    printf("\n");
-    Node *huffman_tree_root=NULL;
-    Huffman h = * new Huffman(huffman_data,heap_size);
-//    huffman_tree(&huffman_tree_root,huffman_data,heap_size);
-    h.in_traverse_tree(h.get_root());
-//    hin_traverse_tree(huffman_tree_root,level);
+    Node* nodes = new Node[num*2-1];
+    if(nodes == nullptr)error("Huffman:new nodes error");
     
+    index = 0;
+    root = &(nodes[index++]);
+    Node* pt=nullptr;
+    for(i=0;i<256;i++){
+        if(encodes[i].len > 0){
+            pt = root;
+            for(j=0 ; j<encodes[i].len ;j++){
+                if(encodes[i].code[j] == '0'){
+                    if(pt->left != nullptr)pt = pt->left;
+                    else{
+                        pt->left = &(nodes[index++]);
+                        pt->left->parent = pt;
+                        pt = pt->left;
+                    }
+                }
+                else if (encodes[i].code[j] == '1'){
+                    if(pt->right != nullptr) pt = pt->right;
+                    else{
+                        pt->right = &nodes[index++];
+                        pt->right->parent = pt;
+                        pt = pt->right;
+                    }
+                }
+                else error("Huffman:encodes error");
+            }
+            pt->data = (unsigned char)i;
+        }
+    }
 }
-
-
 Huffman::~Huffman(){
     if(root != nullptr){
         free_memory(root);

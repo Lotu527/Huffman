@@ -12,6 +12,61 @@
 #include <unistd.h>
 #include "huffman.h"
 
+void get_head(FILE** file , Encode* encodes, char** file_name , long* last_bits){
+    if(file == nullptr || *file == nullptr || encodes == nullptr || file_name == nullptr || last_bits == nullptr)error("get head:argument error");
+    
+    unsigned char* buffer = new unsigned char[sizeof(long)*2];
+    if(buffer == nullptr)error("get head: new buffer error");
+    if(fread(buffer,sizeof(long),2,*file)!=2)error("get head: read two long error");
+    long len_head = *((long*)buffer);
+    long len_table = *((long*)(buffer + sizeof(long)));
+    if(buffer != nullptr){
+        delete[]  buffer;
+        buffer = nullptr;
+    }
+    buffer = new unsigned char[len_table];
+    if(buffer == nullptr)error("get head: new buffer error");
+    fseek(*file, 0L, SEEK_SET);
+    if(fread(buffer, sizeof(unsigned char), len_table, *file) != len_table)error("get head:fread error");
+    unsigned char *pt1 = buffer;
+    unsigned char *pt2 = buffer + len_head;
+    unsigned char *pt2_end = buffer + len_table;
+    unsigned char *pt;
+    pt1 += sizeof(long)*2;
+    long len_author = *(pt1) , len_soft = *(pt1+1) , len_suf = *(pt1+2) , len_file_name = *(pt1+3),i;
+    *last_bits = *(pt1+4);
+    pt1 += 5;
+    log("\ncompress author:",false);
+    for(i=1,pt = pt1; i<=len_author;i++,pt++)printf("%c",*pt);
+    log("\ncompress soft:",false);
+    for(i=1; i<=len_soft;i++,pt++)printf("%c",*pt);
+    log("\ncompress author:",false);
+    for(i=1; i<len_suf;i++,pt++)printf("%c",*pt);
+    log("");
+    (*file_name) = new char[len_file_name+1];
+    if(file_name == nullptr)error("get head:new filename error");
+    memcpy((*file_name), pt, len_file_name);
+    (*file_name)[len_file_name]='\0';
+    log("original file name:",false);
+    for(i=0;i<len_file_name;i++,pt++)printf("%c",*pt);
+    log("");
+    pt = pt2;
+    for (i=0; pt<pt2_end;i++) {
+        if(*pt == 0x00)pt++;
+        else{
+            encodes[i].code = new char[*pt];
+            if(encodes[i].code == nullptr)error("get head:new encodes[i].code");
+            encodes[i].len = *pt;
+            memcpy(encodes[i].code, pt+1, *pt);
+            pt = pt + 1 + encodes[i].len;
+        }
+    }
+    if(buffer != nullptr){
+        delete[] buffer;
+        buffer = nullptr;
+    }
+}
+
 void bit_set(unsigned char* ch , long i ,long f){
     if (f == 1) {
         (*ch) |= (0x80>>i);
@@ -78,7 +133,6 @@ void get_weight(FILE* file,Node** nodes,long* len){
         pt=buffer;
         pt_end=buffer+read;
         for(;pt!=pt_end;pt++){
-//            printf("%ld\n",long(*pt));
             array[long(*pt)].data = *pt;
             array[long(*pt)].count += 1;
         }
@@ -95,12 +149,6 @@ void get_weight(FILE* file,Node** nodes,long* len){
     }
 }
 
-long convert(unsigned char* data){
-    for(int i=0;i<8;i++)
-        printf("%c",data[i]);
-    printf("\n");
-    return 1;
-}
 void encode(Node** nodes,long len,Encode* encodes){
     if(nodes == nullptr || len < 1 || len > 256)error("encode:argument error");
     
@@ -112,8 +160,6 @@ void encode(Node** nodes,long len,Encode* encodes){
     char tmp[260];
     for(i=1;i<=len;i++)backup[i]=nodes[i];
     Huffman huffman=*new Huffman(nodes,len);
-//    huffman.in_traverse_tree(huffman.get_root());
-//    huffman.in_traverse_tree(huffman.get_root());
     for(i=1;i<=len;i++){
         start=259;
         Node* leaf = backup[i];
@@ -136,7 +182,58 @@ void encode(Node** nodes,long len,Encode* encodes){
     }
 
 }
-
-
+bool decode_node(Node** root , bool f){
+    if(root == nullptr  || *root == nullptr)error("decode node: argument error");
+    if(f){
+        (*root) = (*root)->right;
+        if((*root)->left == nullptr && (*root)->right == nullptr)return true;
+        return false;
+    }else{
+        (*root) = (*root)->left;
+        if((*root)->left == nullptr && (*root)->right == nullptr)return true;
+        return false;
+    }
+}
+void decode(Node* root,Node** last,EncodeBuffer* en_buffer,DecodeBuffer* de_buffer){
+    if(last == nullptr || en_buffer == nullptr || de_buffer == nullptr)error("decode:argument error");
+    
+    long last_bits = 0 , i;
+    bool f1=false,f2;
+    if(en_buffer->last_bytes > 0){
+        f1 = true;
+        last_bits = en_buffer->last_bytes;
+    }
+    if(*last == nullptr)*last = root;
+    if(de_buffer->len != 0)de_buffer->len = 0;
+    long len_buffer = en_buffer->len;
+    
+    unsigned char *pt = en_buffer->buffer , *pt_end = en_buffer->buffer + len_buffer -1,tmpc,bit_base;
+    for(;pt <= pt_end;pt++){
+        tmpc = *pt;
+        for(i = 0 ;i<8;i++){
+            bit_base = 0x80>>i;
+            if(bit_base & tmpc)f2=true;
+            else f2 = false;
+            if(decode_node(last, f2)==1){
+                de_buffer->buffer[de_buffer->len] = (*last)->data;
+                de_buffer->len += 1;
+                (*last) = root;
+            }
+        }
+    }
+    if (f1) {
+        tmpc = en_buffer->buffer[en_buffer->len];
+        for(i=0;i<last_bits;i++){
+            bit_base = 0x80 >> i;
+            if(bit_base & tmpc)f2=true;
+            else f2 = false;
+            if(decode_node(last, f2)==1){
+                de_buffer->buffer[de_buffer->len] = (*last)->data;
+                de_buffer->len += 1;
+                *last = root;
+            }
+        }
+    }
+}
 
 #endif /* tools_h */

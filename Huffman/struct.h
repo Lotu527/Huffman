@@ -103,6 +103,7 @@ struct Header
     long len_suf=0;
     long len_file_name=0;
     long len_lastByte=0;
+    
     char* author=nullptr;
     char* soft=nullptr;
     char* suf=nullptr;
@@ -117,7 +118,7 @@ struct Header
         memcpy(this->soft,soft,len_soft);
         this->suf = new char[len_suf+1];
         memcpy(this->suf,suf,len_suf);
-        this->len_header=len_author+len_soft+len_suf;
+        this->len_header=len_author+len_soft+len_suf+3+1+2*sizeof(long);
     }
     ~Header(){
         if(author!=nullptr){
